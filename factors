@@ -1,41 +1,67 @@
-#!/usr/bin/env bash
-# This is a factors challenge
+#!/usr/bin/python3
+import time
+import math
+import sys
 
-check_factor() {
-    if [ $# -ne 1 ]; then
-        echo "Usage: check_factor <number>"
-        exit 1
-    fi
+def pollard_rho(n):
+    if n % 2 == 0:
+        return 2
+    
+    x = 2
+    y = 2
+    d = 1 
+    # Define the function f(x) using a lambda function
+    f = lambda x: (x**2 + 1) % n
+    # Loop until a non-trivial factor is found
+    while d == 1:
+        # Generate new values for x using the function f(x)
+        x = f(x)
+	
+        # Generate new values for y using the function f(f(y))
+        y = f(f(y))
+        # Calculate the greatest common divisor between |x - y| and n
+        d = math.gcd(abs(x - y), n)
+    # Return the non-trivial factor
+    return d
 
-    factors=$(factor "$1" | awk '{$1=""; print $0}' | sed 's/ //g')
-    factors_array=($factors)
+def main():
+    # Check if the correct number of command-line arguments is provided
+    if len(sys.argv) != 2:
+        # Print the correct usage of the program
+        print("Usage: python factorize.py <file>")
+        # Exit the program if the correct arguments are not provided
+        return
+    # Get the file path from the command-line argument
+    file_path = sys.argv[1]
+    # start timing
+    start_time = time.time()
+    try:
+        # Open the file in read mode
+        with open(file_path, 'r') as file:
+	# Read all lines of the file into a lis
+            numbers = file.readlines()
+        # Iterate through each number in the list
+        for number in numbers:
+	# Convert the string number to an integer
+            num = int(number.strip())
+	# Factorize the number using Pollard's rho algorithm
+            factor = pollard_rho(num)
+            # If the factor is equal to the original number
+            if factor == num:
+                # Print that the number is prime
+                print(f"{num} is prime.")
+            else:
+	    # Print the factors of the number
+                print(f"{num}={factor}*{num // factor}")
+        
+        if time.time() - start_time > 5:
+            print("Time limit exceeded")
+            exit()
 
-    if [ ${#factors_array[@]} -eq 1 ]; then
-        echo "$1=1*$1"
-    else
-        max_factor=${factors_array[-1]}
-        second_max_factor=${factors_array[-2]}
+    # Print an error message if the file is not found
+    except FileNotFoundError:
+        print(f"File '{file_path}' not found.")
 
-        if [ ${#factors_array[@]} -gt 2 ]; then
-            for ((i=${#factors_array[@]}-3; i>=0; i--)); do
-                if [ $(echo "${factors_array[$i]}*$second_max_factor" | bc) -gt $(echo "$max_factor*${
-factors_array[$i+1]}" | bc) ]; then
-                    break
-                fi
+if __name__ == '__main__':
+    main()  # Call the main function when the script is executed
 
-                second_max_factor=${factors_array[$i]}
-            done
-        fi
-
-        echo "$1=$max_factor*$second_max_factor"
-    fi
-}
-
-if [ $# -ne 1 ]; then
-    echo 'Usage: factors <file>'
-    exit 1
-else
-    while read -r number; do
-        check_factor "$number"
-    done < "$1"
-fi
